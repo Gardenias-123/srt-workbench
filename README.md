@@ -1,6 +1,10 @@
 # SRT Workbench · 可微分 SRT / TopoSRT 冠层辐射传输工作台
 
-**在线演示：** [`https://huggingface.co/spaces/YOUR_USER/srt-workbench`](https://huggingface.co/spaces/YOUR_USER/srt-workbench)（部署后替换为实际链接）
+**在线演示（魔搭 ModelScope 创空间）：** [https://www.modelscope.cn/studios/YuXinpei/srt-workbench](https://www.modelscope.cn/studios/YuXinpei/srt-workbench)
+　直连应用：[https://yuxinpei-srt-workbench.ms.show](https://yuxinpei-srt-workbench.ms.show)
+
+> 免费实例空闲后会休眠，首次访问需等 30–60 s 唤醒；首次反演还要 JAX 编译 1–2 min。
+> 演示只运行 JAX 引擎（Fortran 参考程序不在公开空间分发）。
 
 A differentiable implementation of the stochastic radiative transfer (SRT / TopoSRT)
 model for vegetation canopies, with a local web workbench for forward

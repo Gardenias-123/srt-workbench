@@ -1,0 +1,16 @@
+{
+  "sdk_type": "docker",
+  "resource_configuration": "platform/2v-cpu-8g-mem",
+  "port": 7860,
+  "environment_variables": [
+    { "name": "SRT_DEMO", "value": "1" },
+    { "name": "SRT_ALLOW_FORTRAN", "value": "0" },
+    { "name": "SRT_MAX_NZ", "value": "20" },
+    { "name": "SRT_MAX_ITER", "value": "300" },
+    { "name": "SRT_MAX_WORKERS", "value": "1" },
+    { "name": "SRT_RATE_LIMIT", "value": "40" },
+    { "name": "SRT_RATE_WINDOW", "value": "600" },
+    { "name": "SRT_RUNS_DIR", "value": "/tmp/srt_runs" },
+    { "name": "SRT_JAX_CACHE", "value": "/tmp/srt_jax_cache" }
+  ]
+}

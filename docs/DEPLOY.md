@@ -1,4 +1,57 @@
-# 部署指南（GitHub + Hugging Face Spaces）
+# 部署指南（ModelScope / Hugging Face Spaces）
+
+## 0. 当前部署：魔搭 ModelScope 创空间（推荐）
+
+线上地址：
+
+- 创空间：<https://www.modelscope.cn/studios/YuXinpei/srt-workbench>
+- 直连应用：<https://yuxinpei-srt-workbench.ms.show>
+
+配置：Docker SDK、免费 `platform/2v-cpu-8g-mem`（2 vCPU / 8 GB）、端口 7860、
+公开（public）。部署文件在 [`deploy/modelscope/`](../deploy/modelscope/)：
+
+- `ms_deploy.json`：SDK 类型、免费硬件、端口与环境变量；
+- `sync_to_studio.py`：把运行时文件同步进 Studio 克隆目录；
+- `README.md`：创空间页面说明。
+
+更新流程（需要魔搭 Access Token，见 <https://modelscope.cn/my/myaccesstoken>）：
+
+```bash
+cd D:/AAA-DOCTOR-YXP/06-srt-workbench
+git clone https://oauth2:<TOKEN>@www.modelscope.cn/studios/YuXinpei/srt-workbench.git studio-clone
+python srt-workbench/deploy/modelscope/sync_to_studio.py studio-clone
+cd studio-clone && git add -A && git commit -m "deploy: sync" && git push origin master
+```
+
+Docker 类型 push 后**不会自动重建**，需要用 OpenAPI 触发：
+
+```bash
+curl -X POST -H "Authorization: Bearer <TOKEN>" \
+  https://modelscope.cn/openapi/v1/studios/YuXinpei/srt-workbench/deploy
+```
+
+构建/运行状态与日志：
+
+```bash
+curl -H "Authorization: Bearer <TOKEN>" \
+  https://modelscope.cn/openapi/v1/studios/YuXinpei/srt-workbench
+curl -H "Authorization: Bearer <TOKEN>" \
+  "https://modelscope.cn/openapi/v1/studios/YuXinpei/srt-workbench/logs/build?page_size=100"
+```
+
+注意：
+
+- 应用必须监听 `0.0.0.0:7860`（当前 Dockerfile 已满足）；平台保留端口（5000/8080 等）不能用。
+- 首次创建创空间要求魔搭账号已绑定阿里云账号并完成实名认证。
+- 免费实例空闲会休眠，冷启动约 30–60 s；首次反演含 JAX 编译 1–2 min。
+- 网关会拦截非浏览器 UA 的请求，用 `curl` 验证时加浏览器 `-A`。
+- 8 GB 内存下演示上限建议保持 `SRT_MAX_NZ=20`、`SRT_MAX_ITER=300`、单并发；
+  若反演 OOM，把 `nz` 降到 15 或迭代降到 150。
+
+## Hugging Face Spaces（备选，现需 PRO）
+
+> 2026-11 起，HF 免费账号创建 Docker/Gradio Space 会返回 `402`，要求 PRO 订阅。
+> 以下流程仅在订阅 PRO 或改用其他账号时可用。
 
 本项目是一个 Flask 应用，推荐部署方式：
 
