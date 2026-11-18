@@ -22,4 +22,4 @@ jobs:
       - name: Run tests (fast subset)
         env:
           SRT_ALLOW_FORTRAN: "0"
-        run: pytest tests -q
+        run: python -m pytest tests -q
