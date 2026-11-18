@@ -186,11 +186,14 @@ function renderForward(result) {
   drawProfile(result);
   drawEnergy(result);
   $("downloadCsv").classList.remove("disabled");
-  $("downloadCsv").href = `/api/download/${state.jobId}/brf.csv`;
+  const csvName = result.engine === "jax" ? "jax_brf.csv" : "brf.csv";
+  $("downloadCsv").href = `/api/download/${state.jobId}/${csvName}`;
   $("downloadJson").classList.remove("disabled");
   $("downloadJson").href = `/api/download/${state.jobId}/result.json`;
   $("logFull").textContent = (result.log_tail || []).join("\n") || "无日志";
-  $("compareStatus").textContent = state.lastJax ? "已有 JAX 结果，可在“对比”页查看。" : "Fortran 结果已就绪，可运行 JAX 对比。";
+  $("compareStatus").textContent = state.demo
+    ? "在线演示：仅 JAX 引擎（Fortran 对比已关闭）。"
+    : (state.lastJax ? "已有 JAX 结果，可在“对比”页查看。" : "Fortran 结果已就绪，可运行 JAX 对比。");
 }
 
 function drawBrf(result) {
