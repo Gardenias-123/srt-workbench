@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>可微分 SRT / TopoSRT 工作台</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<header class="topbar">
+  <div>
+    <h1>可微分 SRT / TopoSRT 工作台</h1>
+    <p class="sub" id="subtitle">完整 Fortran 正演 · 坡面 TopoSRT · JAX 可微反演</p>
+  </div>
+  <div class="engine-pill" id="enginePill">检查引擎…</div>
+</header>
+
+<main class="layout">
+  <aside class="panel">
+    <h2>参数</h2>
+
+    <details open>
+      <summary>冠层结构</summary>
+      <div class="grid2">
+        <label>H (m)<input id="H" type="number" step="0.1" value="5.0"></label>
+        <label>覆盖度<input id="cover" type="number" step="0.01" value="0.49397"></label>
+        <label>d_L (m²/m³)<input id="dL" type="number" step="0.05" value="1.0"></label>
+        <label>冠幅 (m)<input id="diam" type="number" step="0.1" value="5.0"></label>
+        <label>冠形
+          <select id="treeType">
+            <option value="4" selected>球形</option>
+            <option value="1">柱形</option>
+            <option value="2">锥形</option>
+            <option value="3">椭球</option>
+          </select>
+        </label>
+        <label>LAD
+          <select id="lad">
+            <option value="6" selected>球形 (6)</option>
+            <option value="1">喜平型 (1)</option>
+            <option value="2">喜直型 (2)</option>
+            <option value="3">斜交型 (3)</option>
+            <option value="4">极端型 (4)</option>
+            <option value="5">均匀型 (5)</option>
+            <option value="7">水平 (7)</option>
+            <option value="8">垂直 (8)</option>
+            <option value="9">大气 (9)</option>
+          </select>
+        </label>
+      </div>
+    </details>
+
+    <details>
+      <summary>光学与热点</summary>
+      <div class="grid2">
+        <label>叶透过率 τ_L<input id="tauL" type="number" step="0.01" value="0.4843"></label>
+        <label>叶反射率 ρ_L<input id="roL" type="number" step="0.01" value="0.4746"></label>
+        <label>土壤反射率<input id="roSoil" type="number" step="0.01" value="0.3379"></label>
+        <label>热点参数<input id="hotSpot" type="number" step="0.5" value="8.0"></label>
+      </div>
+    </details>
+
+    <details open>
+      <summary>光照与地形</summary>
+      <div class="grid2">
+        <label>SZA (°)<input id="sza" type="number" step="1" value="45"></label>
+        <label>SAA (°)<input id="saa" type="number" step="1" value="270"></label>
+        <label>坡度 (°)<input id="slope" type="number" step="1" value="0"></label>
+        <label>坡向 (°)<input id="aspect" type="number" step="1" value="90"></label>
+        <label>LAD 旋转角 (°)<input id="alphaSlope" type="number" step="1" value="0"></label>
+        <label>LAD 方位 (°)<input id="betaAspect" type="number" step="1" value="90"></label>
+        <label>直射比例 i0<input id="i0" type="number" step="0.1" min="0" max="1" value="1.0"></label>
+      </div>
+      <p class="hint">坡面场景建议把 LAD 旋转角设为坡度、LAD 方位设为坡向；i0=1 纯太阳直射，i0=0 纯天空漫射。</p>
+    </details>
+
+    <details>
+      <summary>离散与观测角</summary>
+      <div class="grid2">
+        <label>层数 nz<input id="nz" type="number" step="1" value="20"></label>
+        <label>最大迭代<input id="maxiter" type="number" step="1" value="10"></label>
+      </div>
+      <label>VZA 列表（逗号分隔）
+        <input id="vza" type="text" value="0,15,30,45,60">
+      </label>
+      <label>VAA 列表（逗号分隔）
+        <input id="vaa" type="text" value="0,90,180,270">
+      </label>
+      <div class="preset-row">
+        <button type="button" class="ghost" data-preset="quick">快速 5×4</button>
+        <button type="button" class="ghost" data-preset="dense">密集 7×8</button>
+        <button type="button" class="ghost" data-preset="principal">主平面</button>
+      </div>
+    </details>
+
+    <button id="runBtn" class="primary">运行正演</button>
+    <div class="progress-wrap">
+      <div class="progress"><div id="progressBar"></div></div>
+      <div id="progressText" class="hint">等待运行</div>
+    </div>
+  </aside>
+
+  <section class="content">
+    <div class="tabs" role="tablist">
+      <button class="tab active" data-tab="forward">正演</button>
+      <button class="tab" data-tab="inversion">反演</button>
+      <button class="tab" data-tab="sensitivity">敏感性</button>
+      <button class="tab" data-tab="compare">对比</button>
+      <button class="tab" data-tab="logs">日志</button>
+    </div>
+
+    <div id="tab-forward" class="tab-pane active">
+      <div id="summary" class="summary-grid">
+        <div class="card"><span>状态</span><strong id="cardStatus">未运行</strong></div>
+        <div class="card"><span>引擎</span><strong id="cardEngine">—</strong></div>
+        <div class="card"><span>平均 BRF</span><strong id="cardMean">—</strong></div>
+        <div class="card"><span>能量闭合</span><strong id="cardEnergy">—</strong></div>
+      </div>
+
+      <div class="chart-head">
+        <h3>BRF–VZA 曲线</h3>
+        <label class="inline">VAA
+          <select id="vaaSelect"></select>
+        </label>
+      </div>
+      <div id="brfChart" class="chart"></div>
+
+      <div class="chart-grid">
+        <div>
+          <h3>BRF 极坐标/热图</h3>
+          <div id="polarChart" class="chart small"></div>
+        </div>
+        <div>
+          <h3>垂直剖面</h3>
+          <div id="profileChart" class="chart small"></div>
+        </div>
+      </div>
+
+      <h3>能量收支</h3>
+      <div id="energyTable" class="table-wrap"></div>
+
+      <div class="actions">
+        <a id="downloadCsv" class="button disabled" href="#">下载 BRF CSV</a>
+        <a id="downloadJson" class="button disabled" href="#">下载结果 JSON</a>
+      </div>
+    </div>
+
+    <div id="tab-inversion" class="tab-pane">
+      <div class="form-card">
+        <h3>梯度反演（JAX 可微模型）</h3>
+        <div class="grid2">
+          <label>观测来源
+            <select id="invSource">
+              <option value="synthetic" selected>JAX 合成观测</option>
+              <option value="fortran">最近一次 Fortran 正演</option>
+            </select>
+          </label>
+          <label>噪声水平<input id="invNoise" type="number" step="0.001" value="0.005"></label>
+          <label>迭代次数<input id="invIter" type="number" step="50" value="300"></label>
+          <label>学习率<input id="invLr" type="number" step="0.001" value="0.01"></label>
+        </div>
+        <div class="checks">
+          <span>反演参数：</span>
+          <label><input type="checkbox" data-free="H" checked> H</label>
+          <label><input type="checkbox" data-free="cover" checked> 覆盖度</label>
+          <label><input type="checkbox" data-free="d_L"> d_L</label>
+          <label><input type="checkbox" data-free="LAI" checked> LAI</label>
+          <label><input type="checkbox" data-free="slope"> 坡度</label>
+          <label><input type="checkbox" data-free="aspect"> 坡向</label>
+        </div>
+        <p class="hint">H 与 d_L 在 BRF 中严格退化（H→aH, d_L→d_L/a 不变），单波段 BRF 只能辨识 LAI 与覆盖度；反演 H 需外部先验/LiDAR。坡向在对称观测网格下通常不可辨识。</p>
+        <button id="invBtn" class="primary">运行反演</button>
+        <div id="invStatus" class="hint"></div>
+      </div>
+      <div class="chart-grid">
+        <div><h3>损失曲线</h3><div id="lossChart" class="chart small"></div></div>
+        <div><h3>观测 vs 拟合</h3><div id="fitChart" class="chart small"></div></div>
+      </div>
+      <div id="invTable" class="table-wrap"></div>
+    </div>
+
+    <div id="tab-sensitivity" class="tab-pane">
+      <div class="form-card">
+        <h3>敏感性 / 可辨识性</h3>
+        <div class="grid2">
+          <label>观测来源
+            <select id="sensSource">
+              <option value="synthetic" selected>JAX 合成观测</option>
+              <option value="fortran">最近一次 Fortran 正演</option>
+            </select>
+          </label>
+        </div>
+        <button id="sensBtn" class="primary">运行敏感性</button>
+        <div id="sensStatus" class="hint"></div>
+      </div>
+      <div class="chart-grid">
+        <div><h3>相对敏感性（参数 × 观测）</h3><div id="sensChart" class="chart"></div></div>
+        <div><h3>参数相关矩阵</h3><div id="corrChart" class="chart small"></div></div>
+      </div>
+      <div id="sensMeta" class="hint"></div>
+    </div>
+
+    <div id="tab-compare" class="tab-pane">
+      <div class="form-card">
+        <h3>Fortran vs JAX</h3>
+        <p class="hint">先运行 Fortran 正演，再运行 JAX 可微正演；这里会叠加两条曲线并给出 RMSE。</p>
+        <button id="jaxCompareBtn" class="primary">运行 JAX 可微正演</button>
+        <div id="compareStatus" class="hint"></div>
+      </div>
+      <div id="compareChart" class="chart"></div>
+      <div id="compareTable" class="table-wrap"></div>
+    </div>
+
+    <div id="tab-logs" class="tab-pane">
+      <pre id="logFull" class="logbox">暂无日志</pre>
+    </div>
+  </section>
+</main>
+
+<script src="{{ url_for('static', filename='vendor/plotly.min.js') }}"></script>
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

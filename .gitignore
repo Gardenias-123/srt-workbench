@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.venv/
+.venv_less/
+venv/
+
+# App output
+runs/
+*.log
+
+# JAX compilation cache
+.jax_cache/
+srt_jax_cache/
+
+# Data / manuscript / private material (repo-root only; tests/data stays)
+/data/
+/data_zzl/
+/SRT/
+/SRT_topo/
+/SRT_diag*/
+*.pdf
+*.zip
+*.exe
+
+# OS
+.DS_Store
+Thumbs.db
